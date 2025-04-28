@@ -21,7 +21,7 @@ from enum import Enum
 import draccus
 
 
-# NOTE(Steven): Consider moving to utils?
+# NOTE(Steven): Consider moving to utils? No
 class ColorMode(Enum):
     RGB = 0
     BGR = 1

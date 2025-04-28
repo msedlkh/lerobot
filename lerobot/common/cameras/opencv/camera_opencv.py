@@ -54,7 +54,7 @@ MAX_OPENCV_INDEX = 60
 
 logger = logging.getLogger(__name__)
 
-
+# NOTE(Steven): Consider removing this if not used, and if used mnove it to utils
 def is_valid_unix_path(path: str) -> bool:
     """Note: if 'path' points to a symlink, this will return True only if the target exists"""
     p = Path(path)
@@ -65,6 +65,7 @@ def get_camera_index_from_unix_port(port: Path) -> int:
     return int(str(port.resolve()).removeprefix("/dev/video"))
 
 
+# NOTE(Steven): Move this to utils
 def save_image(img_array: np.ndarray, camera_index: int, frame_index: int, images_dir: Path):
     img = Image.fromarray(img_array)
     path = images_dir / f"camera_{camera_index:02d}_frame_{frame_index:06d}.png"
@@ -204,10 +205,10 @@ class OpenCVCamera(Camera):
         self.channels = config.channels
         self.color_mode = config.color_mode
 
+        # NOTE(Steven): Consider renaming this to videocapture_camera
         self.camera: cv2.VideoCapture | None = None
         self.thread: Thread | None = None
         self.stop_event: Event | None = None
-        # self.color_image = None # NOTE(Steven): Consider changing this to a Queue?
         self.frame_queue = queue.Queue(maxsize=1)
         self.logs = {}
 
@@ -228,6 +229,8 @@ class OpenCVCamera(Camera):
         if not camera.isOpened():
             # Release camera to make it accessible for `find_camera_indices`
             camera.release()
+
+            # NOTE(Steven): Move this to another function and open in connect()
             # Verify that the provided `camera_index` is valid before printing the traceback
             cameras_info = self.find_cameras()
             available_cam_ids = [cam["index"] for cam in cameras_info]
@@ -251,6 +254,7 @@ class OpenCVCamera(Camera):
         self.camera = self._open_camera(self.index_or_path, self.backend)
 
         # NOTE(Steven): What happens if it is none?
+        # NOTE(Steven): Consider moving this to as the implementation of an abstract class from Camera if it makes sense also for a realsese cam to have such abstract method
         if self.fps is not None:
             self._set_fps(self.fps)
         if self.capture_width is not None:
@@ -265,14 +269,14 @@ class OpenCVCamera(Camera):
         if not math.isclose(fps, actual_fps, rel_tol=1e-3):
             raise RuntimeError(
                 f"Can't set {fps=} for {self}. Actual value is {actual_fps}."
-            )  # NOTE(Steven): Consider a more explicit exception? CameraConfigurationError?
+            )  # NOTE(Steven): Consider a more explicit exception? CameraConfigurationError? No
 
     def _set_capture_width(self, capture_width: int) -> None:
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, capture_width)
-        actual_width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
+        actual_width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
         if not math.isclose(
             self.capture_width, actual_width, rel_tol=1e-3
-        ):  # NOTE(Steven): Do we really need isclose()? Couldn't we just cast to int?
+        ):  # NOTE(Steven): Do we really need isclose()? Couldn't we just cast to int? Yes but check
             raise RuntimeError(f"Can't set {capture_width=} for {self}. Actual value is {actual_width}.")
 
     def _set_capture_height(self, capture_height: int) -> None:
@@ -342,7 +346,7 @@ class OpenCVCamera(Camera):
         if requested_color_mode == ColorMode.RGB:
             color_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # NOTE(Steven): I think this is better placed in read() if not used in async
+        # NOTE(Steven): I think this is better placed in read() if not used in async? No
         h, w, _ = color_image.shape
         if h != self.capture_height or w != self.capture_width:
             raise RuntimeError(
@@ -363,18 +367,19 @@ class OpenCVCamera(Camera):
                     _ = self.frame_queue.get_nowait()
                 self.frame_queue.put(color_image)
             except Exception as e:
-                # NOTE(Steven): Consider logging the error instead of printing
-                print(f"Error reading in thread: {e}")
-                # NOTE(Steven): Consider small sleep here to avoid spam
+                logger.warning(f"Error reading from camera {self.index_or_path}: {e}")
 
     def async_read(self, timeout_ms: float = 2000):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
+        
         if self.thread is None or not self.thread.is_alive():
+            # NOTE(Steven): Consider moving this to a different function.
             if self.thread is not None:
                 self.stop_event.set()
                 self.thread.join(timeout=0.5)
+            # NOTE(Steven): This might be safe to remove
             while not self.frame_queue.empty():
                 try:
                     self.frame_queue.get_nowait()
@@ -386,11 +391,8 @@ class OpenCVCamera(Camera):
             )
             self.thread.daemon = True
             self.thread.start()
-            init_wait = min(0.5, 2 / self.fps if self.fps and self.fps > 0 else 0.1)
-            time.sleep(init_wait)
 
         try:
-            # NOTE(Steven): No postprocessing here?
             return self.frame_queue.get(timeout=timeout_ms / 1000)
 
         except queue.Empty:
@@ -408,7 +410,7 @@ class OpenCVCamera(Camera):
 
         if self.thread is not None:
             self.stop_event.set()
-            self.thread.join()  # wait for the thread to finish # NOTE(Steven): Consider timeout + check status?
+            self.thread.join(timeout=2)  # wait for the thread to finish # NOTE(Steven): Consider timeout + check status?
             self.thread = None
             self.stop_event = None
 
@@ -419,6 +421,7 @@ class OpenCVCamera(Camera):
         logger.debug(f"Camera {self.index_or_path} disconnected.")
 
 
+# NOTE(Steven): Remove this
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Save a few frames using `OpenCVCamera` for all cameras connected to the computer, or a selected subset."

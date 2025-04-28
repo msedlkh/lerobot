@@ -39,7 +39,7 @@ def make_cameras_from_configs(camera_configs: dict[str, CameraConfig]) -> dict[s
     return cameras
 
 
-# NOTE(Steven): Consider using enums?
+# NOTE(Steven): Consider using enums? Yes
 def get_cv2_rotation(rotation: int) -> int:
     import cv2
 
@@ -50,7 +50,6 @@ def get_cv2_rotation(rotation: int) -> int:
     }.get(rotation)
 
 
-# NOTE(Steven): Consider using enums?
 def get_cv2_backend() -> int:
     import cv2
 

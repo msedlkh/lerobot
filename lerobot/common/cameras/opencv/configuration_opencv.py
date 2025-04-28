@@ -19,6 +19,7 @@ class OpenCVCameraConfig(CameraConfig):
     """
 
     index_or_path: int | Path
+    # NOTE: If these configs are None, the camera will be opened with default settings.
     fps: int | None = None
     width: int | None = None
     height: int | None = None
