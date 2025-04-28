@@ -54,6 +54,7 @@ MAX_OPENCV_INDEX = 60
 
 logger = logging.getLogger(__name__)
 
+
 # NOTE(Steven): Consider removing this if not used, and if used mnove it to utils
 def is_valid_unix_path(path: str) -> bool:
     """Note: if 'path' points to a symlink, this will return True only if the target exists"""
@@ -373,7 +374,6 @@ class OpenCVCamera(Camera):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        
         if self.thread is None or not self.thread.is_alive():
             # NOTE(Steven): Consider moving this to a different function.
             if self.thread is not None:
@@ -410,7 +410,9 @@ class OpenCVCamera(Camera):
 
         if self.thread is not None:
             self.stop_event.set()
-            self.thread.join(timeout=2)  # wait for the thread to finish # NOTE(Steven): Consider timeout + check status?
+            self.thread.join(
+                timeout=2
+            )  # wait for the thread to finish # NOTE(Steven): Consider timeout + check status?
             self.thread = None
             self.stop_event = None
 

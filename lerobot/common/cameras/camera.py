@@ -18,6 +18,7 @@ import abc
 
 import numpy as np
 
+
 # NOTE(Steven): Consider configure() if makes sens for both cameras
 class Camera(abc.ABC):
     @property
