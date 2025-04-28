@@ -143,6 +143,7 @@ def save_images_from_cameras(
             frame_index += 1
 
     print(f"Images have been saved to {images_dir}")
+    # NOTE(Steven): Cameras don't get disconnected
 
 
 class OpenCVCamera(Camera):
@@ -262,7 +263,9 @@ class OpenCVCamera(Camera):
         actual_fps = self.camera.get(cv2.CAP_PROP_FPS)
         # Using `math.isclose` since actual fps can be a float (e.g. 29.9 instead of 30)
         if not math.isclose(fps, actual_fps, rel_tol=1e-3):
-            raise RuntimeError(f"Can't set {fps=} for {self}. Actual value is {actual_fps}.")
+            raise RuntimeError(
+                f"Can't set {fps=} for {self}. Actual value is {actual_fps}."
+            )  # NOTE(Steven): Consider a more explicit exception? CameraConfigurationError?
 
     def _set_capture_width(self, capture_width: int) -> None:
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, capture_width)
@@ -328,7 +331,7 @@ class OpenCVCamera(Camera):
     def _postprocess_image(self, image, color_mode: ColorMode | None = None):
         requested_color_mode = self.color_mode if color_mode is None else color_mode
 
-        if requested_color_mode not in [ColorMode.RGB, ColorMode.BGR]:  # NOTE(Steven): Use new enums?
+        if requested_color_mode not in (ColorMode.RGB, ColorMode.BGR):  # NOTE(Steven): Use new enums?
             raise ValueError(
                 f"Expected color values are 'rgb' or 'bgr', but {requested_color_mode} is provided."
             )
@@ -360,6 +363,7 @@ class OpenCVCamera(Camera):
                     _ = self.frame_queue.get_nowait()
                 self.frame_queue.put(color_image)
             except Exception as e:
+                # NOTE(Steven): Consider logging the error instead of printing
                 print(f"Error reading in thread: {e}")
                 # NOTE(Steven): Consider small sleep here to avoid spam
 
