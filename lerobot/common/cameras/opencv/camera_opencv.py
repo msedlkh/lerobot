@@ -18,9 +18,11 @@ This file contains utilities for recording frames from cameras. For more info lo
 
 import argparse
 import concurrent.futures
+import contextlib
 import logging
 import math
 import platform
+import queue
 import shutil
 import time
 from pathlib import Path
@@ -39,7 +41,7 @@ from lerobot.common.utils.utils import capture_timestamp_utc
 
 from ..camera import Camera
 from ..utils import get_cv2_backend, get_cv2_rotation
-from .configuration_opencv import OpenCVCameraConfig
+from .configuration_opencv import ColorMode, OpenCVCameraConfig
 
 IndexOrPath: TypeAlias = int | Path
 
@@ -204,7 +206,8 @@ class OpenCVCamera(Camera):
         self.camera: cv2.VideoCapture | None = None
         self.thread: Thread | None = None
         self.stop_event: Event | None = None
-        self.color_image = None
+        # self.color_image = None # NOTE(Steven): Consider changing this to a Queue?
+        self.frame_queue = queue.Queue(maxsize=1)
         self.logs = {}
 
         self.rotation = get_cv2_rotation(config.rotation)
@@ -217,6 +220,25 @@ class OpenCVCamera(Camera):
     def is_connected(self) -> bool:
         return self.camera.isOpened() if isinstance(self.camera, cv2.VideoCapture) else False
 
+    def _open_camera(self, index_or_path: IndexOrPath, backend: int) -> cv2.VideoCapture:
+        camera = cv2.VideoCapture(index_or_path, backend)
+
+        # If the camera doesn't work, display the camera indices corresponding to valid cameras.
+        if not camera.isOpened():
+            # Release camera to make it accessible for `find_camera_indices`
+            camera.release()
+            # Verify that the provided `camera_index` is valid before printing the traceback
+            cameras_info = self.find_cameras()
+            available_cam_ids = [cam["index"] for cam in cameras_info]
+            if index_or_path not in available_cam_ids:
+                raise ValueError(
+                    f"`camera_index` is expected to be one of these available cameras {available_cam_ids}, "
+                    f"but {index_or_path} is provided instead. To find the camera index you should use, "
+                    "run `python lerobot/common/robot_devices/cameras/opencv.py`."
+                )
+            raise ConnectionError(f"Can't access {self}.")
+        return camera
+
     def connect(self):
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} is already connected.")
@@ -225,24 +247,9 @@ class OpenCVCamera(Camera):
         # when other threads are used to save the images.
         cv2.setNumThreads(1)
 
-        self.camera = cv2.VideoCapture(self.index_or_path, self.backend)
+        self.camera = self._open_camera(self.index_or_path, self.backend)
 
-        # If the camera doesn't work, display the camera indices corresponding to valid cameras.
-        if not self.camera.isOpened():
-            # Release camera to make it accessible for `find_camera_indices`
-            self.camera.release()
-            # Verify that the provided `camera_index` is valid before printing the traceback
-            cameras_info = self.find_cameras()
-            available_cam_ids = [cam["index"] for cam in cameras_info]
-            if self.index_or_path not in available_cam_ids:
-                raise ValueError(
-                    f"`camera_index` is expected to be one of these available cameras {available_cam_ids}, "
-                    f"but {self.index_or_path} is provided instead. To find the camera index you should use, "
-                    "run `python lerobot/common/robot_devices/cameras/opencv.py`."
-                )
-
-            raise ConnectionError(f"Can't access {self}.")
-
+        # NOTE(Steven): What happens if it is none?
         if self.fps is not None:
             self._set_fps(self.fps)
         if self.capture_width is not None:
@@ -260,7 +267,9 @@ class OpenCVCamera(Camera):
     def _set_capture_width(self, capture_width: int) -> None:
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, capture_width)
         actual_width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
-        if not math.isclose(self.capture_width, actual_width, rel_tol=1e-3):
+        if not math.isclose(
+            self.capture_width, actual_width, rel_tol=1e-3
+        ):  # NOTE(Steven): Do we really need isclose()? Couldn't we just cast to int?
             raise RuntimeError(f"Can't set {capture_width=} for {self}. Actual value is {actual_width}.")
 
     def _set_capture_height(self, capture_height: int) -> None:
@@ -284,15 +293,14 @@ class OpenCVCamera(Camera):
         found_idx_or_paths = []
         for target in possible_idx_or_paths:
             camera = cv2.VideoCapture(target)
-            is_open = camera.isOpened()
-            camera.release()
-            if is_open:
+            if camera.isOpened():
                 print(f"Camera found at {target}")
                 found_idx_or_paths.append(target)
+                camera.release()
 
         return found_idx_or_paths
 
-    def read(self, temporary_color_mode: str | None = None) -> np.ndarray:
+    def read(self, color_mode: ColorMode | None = None) -> np.ndarray:
         """Read a frame from the camera returned in the format (height, width, channels)
         (e.g. 480 x 640 x 3), contrarily to the pytorch format which is channel first.
 
@@ -308,18 +316,19 @@ class OpenCVCamera(Camera):
         if not ret:
             raise RuntimeError(f"Can't capture color image from {self}.")
 
-        self.color_image = self._postprocess_image(color_image, temporary_color_mode)
+        color_image = self._postprocess_image(color_image, color_mode)
 
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read: {dt_ms:.1f}ms")
 
         # log the utc time at which the image was received
         self.logs["timestamp_utc"] = capture_timestamp_utc()
+        return color_image
 
-    def _postprocess_image(self, image, temporary_color_mode: str | None = None):
-        requested_color_mode = self.color_mode if temporary_color_mode is None else temporary_color_mode
+    def _postprocess_image(self, image, color_mode: ColorMode | None = None):
+        requested_color_mode = self.color_mode if color_mode is None else color_mode
 
-        if requested_color_mode not in ["rgb", "bgr"]:
+        if requested_color_mode not in [ColorMode.RGB, ColorMode.BGR]:  # NOTE(Steven): Use new enums?
             raise ValueError(
                 f"Expected color values are 'rgb' or 'bgr', but {requested_color_mode} is provided."
             )
@@ -327,9 +336,10 @@ class OpenCVCamera(Camera):
         # OpenCV uses BGR format as default (blue, green, red) for all operations, including displaying images.
         # However, Deep Learning framework such as LeRobot uses RGB format as default to train neural networks,
         # so we convert the image color from BGR to RGB.
-        if requested_color_mode == "rgb":
+        if requested_color_mode == ColorMode.RGB:
             color_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
+        # NOTE(Steven): I think this is better placed in read() if not used in async
         h, w, _ = color_image.shape
         if h != self.capture_height or w != self.capture_width:
             raise RuntimeError(
@@ -345,29 +355,48 @@ class OpenCVCamera(Camera):
     def _read_loop(self):
         while not self.stop_event.is_set():
             try:
-                self.color_image = self.read()
+                color_image = self.read()
+                with contextlib.suppress(queue.Empty):
+                    _ = self.frame_queue.get_nowait()
+                self.frame_queue.put(color_image)
             except Exception as e:
                 print(f"Error reading in thread: {e}")
+                # NOTE(Steven): Consider small sleep here to avoid spam
 
-    def async_read(self):
+    def async_read(self, timeout_ms: float = 2000):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
-        if self.thread is None:
+        if self.thread is None or not self.thread.is_alive():
+            if self.thread is not None:
+                self.stop_event.set()
+                self.thread.join(timeout=0.5)
+            while not self.frame_queue.empty():
+                try:
+                    self.frame_queue.get_nowait()
+                except queue.Empty:
+                    break
             self.stop_event = Event()
-            self.thread = Thread(target=self._read_loop, args=())
+            self.thread = Thread(
+                target=self._read_loop, args=(), name=f"OpenCVCameraReadLoop-{self.index_or_path}"
+            )
             self.thread.daemon = True
             self.thread.start()
+            init_wait = min(0.5, 2 / self.fps if self.fps and self.fps > 0 else 0.1)
+            time.sleep(init_wait)
 
-        num_tries = 0
-        while True:
-            if self.color_image is not None:
-                return self.color_image
+        try:
+            # NOTE(Steven): No postprocessing here?
+            return self.frame_queue.get(timeout=timeout_ms / 1000)
 
-            time.sleep(1 / self.fps)
-            num_tries += 1
-            if num_tries > self.fps * 2:
-                raise TimeoutError("Timed out waiting for async_read() to start.")
+        except queue.Empty:
+            thread_alive = self.thread is not None and self.thread.is_alive()
+            raise TimeoutError(
+                f"Timed out waiting for frame from camera {self.index_or_path} after {timeout_ms} milliseconds. "
+                f"(Read thread alive: {thread_alive})"
+            ) from queue.Empty
+        except Exception as e:
+            raise RuntimeError(f"Error getting frame from queue for camera {self.index_or_path}: {e}") from e
 
     def disconnect(self):
         if not self.is_connected:
@@ -375,12 +404,15 @@ class OpenCVCamera(Camera):
 
         if self.thread is not None:
             self.stop_event.set()
-            self.thread.join()  # wait for the thread to finish
+            self.thread.join()  # wait for the thread to finish # NOTE(Steven): Consider timeout + check status?
             self.thread = None
             self.stop_event = None
 
-        self.camera.release()
-        self.camera = None
+        if self.camera is not None:
+            self.camera.release()
+            self.camera = None
+
+        logger.debug(f"Camera {self.index_or_path} disconnected.")
 
 
 if __name__ == "__main__":
