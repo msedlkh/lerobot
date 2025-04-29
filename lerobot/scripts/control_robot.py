@@ -153,6 +153,7 @@ from lerobot.common.robot_devices.control_configs import (
     RemoteRobotConfig,
     ReplayControlConfig,
     TeleoperateControlConfig,
+    RemoteTeleoperateControlConfig,
 )
 from lerobot.common.robot_devices.control_utils import (
     control_loop,
@@ -415,6 +416,9 @@ def control_robot(cfg: ControlPipelineConfig):
         calibrate(robot, cfg.control)
     elif isinstance(cfg.control, TeleoperateControlConfig):
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_teleop")
+        teleoperate(robot, cfg.control)
+    elif isinstance(cfg.control, RemoteTeleoperateControlConfig):
+        _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote_teleop")
         teleoperate(robot, cfg.control)
     elif isinstance(cfg.control, RecordControlConfig):
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_record")
