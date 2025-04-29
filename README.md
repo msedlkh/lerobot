@@ -1,9 +1,16 @@
 ## BTG fork of lerobot (msedlkh)
 
-To run so100 remotely: 
-- On lerobot (pi): python lerobot/scripts/control_robot.py --robot.type=so100 --control.type=remote_robot --control.viewer_ip="100.93.72.56" --control.viewer_port="5555"
-  - set viewer_ip and viewer_port to ip of remote pc
-- On remote pc:  python lerobot/scripts/control_robot.py --robot.type=lekiwi --control.type=teleoperate --control.fps=30 --control.display_data=true 
+To run so100 remotely: set viewer_ip and viewer_port to ip of remote pc
+- On lerobot (pi): 
+```
+python lerobot/scripts/control_robot.py --robot.type=so100 --control.type=remote_robot --control.viewer_ip="100.93.72.56" --control.viewer_port="5555"
+```
+
+- On remote pc:  
+```
+python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type=remote_teleoperate --control.fps=30 --control.display_data=true
+
+```
 
 
 <p align="center">
