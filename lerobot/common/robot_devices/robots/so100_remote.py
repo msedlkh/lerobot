@@ -87,10 +87,10 @@ def run_so100(robot_config):
     """
     Runs the so100 robot:
       - Sets up cameras and connects them. [DONE]
-      - Initializes the follower arm motors. [NOT DONE] 
-      - Calibrates the follower arm if necessary. [NOT DONE]
-      - Creates ZeroMQ sockets for receiving commands and streaming observations. [NOT DONE]
-      - Processes incoming commands (arm and wheel commands) and sends back sensor and camera data. [NOT DONE]
+      - Initializes the follower arm motors. [DONE] 
+      - Calibrates the follower arm if necessary. [DONE]
+      - Creates ZeroMQ sockets for receiving commands and streaming observations. [DONE]
+      - Processes incoming commands (arm and wheel commands) and sends back sensor and camera data. [DONE]
     """
     # Import helper functions and classes
     from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs

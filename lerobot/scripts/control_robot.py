@@ -418,6 +418,7 @@ def control_robot(cfg: ControlPipelineConfig):
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_teleop")
         teleoperate(robot, cfg.control)
     elif isinstance(cfg.control, RemoteTeleoperateControlConfig):
+        # msedlkh: (on remote) Add support for remote control of so100. This enables control.type=remote_teleoperate. see README.md for more details.   
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote_teleop")
         teleoperate(robot, cfg.control)
     elif isinstance(cfg.control, RecordControlConfig):
@@ -426,7 +427,7 @@ def control_robot(cfg: ControlPipelineConfig):
     elif isinstance(cfg.control, ReplayControlConfig):
         replay(robot, cfg.control)
     elif isinstance(cfg.control, RemoteRobotConfig):
-        # TODO(msedlkh): Add support for remote robot control using so100
+        # msedlkh: (on robot) Add support for remote control of so100. This enables control.type=remote_robot. see README.md for more details.
         from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
         from lerobot.common.robot_devices.robots.so100_remote import run_so100
 
