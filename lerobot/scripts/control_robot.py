@@ -153,6 +153,7 @@ from lerobot.common.robot_devices.control_configs import (
     RemoteRobotConfig,
     ReplayControlConfig,
     TeleoperateControlConfig,
+    RemoteTeleoperateControlConfig,
 )
 from lerobot.common.robot_devices.control_utils import (
     control_loop,
@@ -416,16 +417,27 @@ def control_robot(cfg: ControlPipelineConfig):
     elif isinstance(cfg.control, TeleoperateControlConfig):
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_teleop")
         teleoperate(robot, cfg.control)
+    elif isinstance(cfg.control, RemoteTeleoperateControlConfig):
+        # msedlkh: (on remote) Add support for remote control of so100. This enables control.type=remote_teleoperate. see README.md for more details.   
+        _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote_teleop")
+        teleoperate(robot, cfg.control)
     elif isinstance(cfg.control, RecordControlConfig):
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_record")
         record(robot, cfg.control)
     elif isinstance(cfg.control, ReplayControlConfig):
         replay(robot, cfg.control)
     elif isinstance(cfg.control, RemoteRobotConfig):
+        # msedlkh: (on robot) Add support for remote control of so100. This enables control.type=remote_robot. see README.md for more details.
         from lerobot.common.robot_devices.robots.lekiwi_remote import run_lekiwi
+        from lerobot.common.robot_devices.robots.so100_remote import run_so100
 
         _init_rerun(control_config=cfg.control, session_name="lerobot_control_loop_remote")
-        run_lekiwi(cfg.robot)
+        if robot.robot_type.startswith("lekiwi"):
+            run_lekiwi(cfg.robot)
+        elif robot.robot_type.startswith("so100"):
+            run_so100(cfg.robot)
+        else:
+            raise ValueError(f"Unsupported remote robot type: {robot.robot_type}")
 
     if robot.is_connected:
         # Disconnect manually to avoid a "Core dump" during process

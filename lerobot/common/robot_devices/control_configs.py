@@ -43,6 +43,15 @@ class TeleoperateControlConfig(ControlConfig):
     # Display all cameras on screen
     display_data: bool = False
 
+@ControlConfig.register_subclass("remote_teleoperate")
+@dataclass
+class RemoteTeleoperateControlConfig(ControlConfig):
+    # Limit the maximum frames per second. By default, no limit.
+    fps: int | None = None
+    teleop_time_s: float | None = None
+    # Display all cameras on screen
+    display_data: bool = False
+
 
 @ControlConfig.register_subclass("record")
 @dataclass

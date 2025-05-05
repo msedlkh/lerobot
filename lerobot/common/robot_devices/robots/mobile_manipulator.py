@@ -640,11 +640,12 @@ class MobileManipulator:
              theta_cmd  : Rotational velocity in deg/s.
         """
         # Extract the raw values in order.
-        raw_list = [
-            int(wheel_raw.get("left_wheel", 0)),
-            int(wheel_raw.get("back_wheel", 0)),
-            int(wheel_raw.get("right_wheel", 0)),
-        ]
+        # raw_list = [
+        #     int(wheel_raw.get("left_wheel", 0)),
+        #     int(wheel_raw.get("back_wheel", 0)),
+        #     int(wheel_raw.get("right_wheel", 0)),
+        # ]
+        raw_list = [0, 0, 0]
 
         # Convert each raw command back to an angular speed in deg/s.
         wheel_degps = np.array([MobileManipulator.raw_to_degps(r) for r in raw_list])

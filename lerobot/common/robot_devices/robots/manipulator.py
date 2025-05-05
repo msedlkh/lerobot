@@ -23,6 +23,8 @@ import logging
 import time
 import warnings
 from pathlib import Path
+import os
+import sys
 
 import numpy as np
 import torch
@@ -166,6 +168,10 @@ class ManipulatorRobot:
         self.cameras = make_cameras_from_configs(self.config.cameras)
         self.is_connected = False
         self.logs = {}
+        # add remote ip if in config
+        self.remote_ip = config.ip # if "ip" in config.values() else None
+        self.remote_port = config.port # if "port" in config.values() else None
+        self.remote_port_video = config.video_port # if "video_port" in config.values() else None
 
     def get_motor_names(self, arm: dict[str, MotorsBus]) -> list:
         return [f"{arm}_{motor}" for arm, bus in arm.items() for motor in bus.motors]

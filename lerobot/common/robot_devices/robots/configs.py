@@ -502,11 +502,16 @@ class So100RobotConfig(ManipulatorRobotConfig):
     # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
     # the number of motors in your follower arms.
     max_relative_target: int | None = None
+    
+    # Network Configuration ## testing network config to access robot remotely
+    ip: str = "100.67.166.113"
+    port: int = 5555
+    video_port: int = 5556
 
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="/dev/tty.usbmodem58760431091",
+                port="/dev/ttyACM1",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -523,7 +528,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="/dev/tty.usbmodem585A0076891",
+                port="/dev/ttyACM0",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -539,23 +544,119 @@ class So100RobotConfig(ManipulatorRobotConfig):
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "laptop": OpenCVCameraConfig(
-                camera_index=0,
+            "cam_high": OpenCVCameraConfig( #realsense camera
+                camera_index=14,
                 fps=30,
                 width=640,
                 height=480,
             ),
-            "phone": OpenCVCameraConfig(
-                camera_index=1,
-                fps=30,
-                width=640,
-                height=480,
+            "cam_low": OpenCVCameraConfig( #insta 360 camera
+                camera_index=0,
+                fps=24,
+                width=1280,
+                height=720,
+                resize=(640, 480),
+            ),            
+            "gelsight": OpenCVCameraConfig( #gelsight camera
+                camera_index=16,
+                fps=25,
+                width=3280,
+                height=2464,
+                resize=(640, 480),
             ),
         }
     )
 
     mock: bool = False
 
+@RobotConfig.register_subclass("so100_remote")
+@dataclass
+class So100RemoteRobotConfig(RobotConfig):
+    calibration_dir: str = ".cache/calibration/so100"
+    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
+    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
+    # the number of motors in your follower arms.
+    max_relative_target: int | None = None
+    
+    # Network Configuration ## testing network config to access robot remotely
+    ip: str = "100.67.166.113"
+    port: int = 5555
+    video_port: int = 5556
+
+    leader_arms: dict[str, MotorsBusConfig] = field(
+        default_factory=lambda: {
+            "main": FeetechMotorsBusConfig(
+                port="/dev/ttyACM0",
+                motors={
+                    # name: (index, model)
+                    "shoulder_pan": [1, "sts3215"],
+                    "shoulder_lift": [2, "sts3215"],
+                    "elbow_flex": [3, "sts3215"],
+                    "wrist_flex": [4, "sts3215"],
+                    "wrist_roll": [5, "sts3215"],
+                    "gripper": [6, "sts3215"],
+                },
+            ),
+        }
+    )
+
+    follower_arms: dict[str, MotorsBusConfig] = field(
+        default_factory=lambda: {
+            "main": FeetechMotorsBusConfig(
+                port="/dev/ttyACM1",
+                motors={
+                    # name: (index, model)
+                    "shoulder_pan": [1, "sts3215"],
+                    "shoulder_lift": [2, "sts3215"],
+                    "elbow_flex": [3, "sts3215"],
+                    "wrist_flex": [4, "sts3215"],
+                    "wrist_roll": [5, "sts3215"],
+                    "gripper": [6, "sts3215"],
+                },
+            ),
+        }
+    )
+
+    cameras: dict[str, CameraConfig] = field(
+        default_factory=lambda: {
+            "cam_high": OpenCVCameraConfig( #realsense camera
+                camera_index=14,
+                fps=30,
+                width=640,
+                height=480,
+            ),
+            "cam_low": OpenCVCameraConfig( #insta 360 camera
+                camera_index=0,
+                fps=24,
+                width=1280,
+                height=720,
+            ),            
+            "gelsight": OpenCVCameraConfig( #gelsight camera
+                camera_index=16,
+                fps=25,
+                width=3280,
+                height=2464,
+            ),
+        }
+    )
+
+    teleop_keys: dict[str, str] = field(
+        default_factory=lambda: {
+            # Movement
+            # "forward": "w",
+            # "backward": "s",
+            # "left": "a",
+            # "right": "d",
+            # "rotate_left": "z",
+            # "rotate_right": "x",
+            # # Speed control
+            # "speed_up": "r",
+            # "speed_down": "f",
+            # quit teleop
+            "quit": "q",
+        }
+    )
+    mock: bool = False
 
 @RobotConfig.register_subclass("stretch")
 @dataclass
@@ -602,17 +703,23 @@ class LeKiwiRobotConfig(RobotConfig):
     max_relative_target: int | None = None
 
     # Network Configuration
-    ip: str = "192.168.0.193"
+    ip: str = "100.67.166.113"
     port: int = 5555
     video_port: int = 5556
 
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
-            "front": OpenCVCameraConfig(
-                camera_index="/dev/video0", fps=30, width=640, height=480, rotation=90
+            "cam_high": OpenCVCameraConfig( #realsense camera
+                camera_index=14,
+                fps=30,
+                width=640,
+                height=480,
             ),
-            "wrist": OpenCVCameraConfig(
-                camera_index="/dev/video2", fps=30, width=640, height=480, rotation=180
+            "cam_low": OpenCVCameraConfig( #insta 360 camera
+                camera_index=0,
+                fps=24,
+                width=1280,
+                height=720,
             ),
         }
     )
@@ -622,7 +729,7 @@ class LeKiwiRobotConfig(RobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="/dev/tty.usbmodem585A0077581",
+                port="/dev/ttyACM0",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -639,7 +746,7 @@ class LeKiwiRobotConfig(RobotConfig):
     follower_arms: dict[str, MotorsBusConfig] = field(
         default_factory=lambda: {
             "main": FeetechMotorsBusConfig(
-                port="/dev/ttyACM0",
+                port="/dev/ttyACM1",
                 motors={
                     # name: (index, model)
                     "shoulder_pan": [1, "sts3215"],
@@ -648,9 +755,9 @@ class LeKiwiRobotConfig(RobotConfig):
                     "wrist_flex": [4, "sts3215"],
                     "wrist_roll": [5, "sts3215"],
                     "gripper": [6, "sts3215"],
-                    "left_wheel": (7, "sts3215"),
-                    "back_wheel": (8, "sts3215"),
-                    "right_wheel": (9, "sts3215"),
+                    # "left_wheel": (7, "sts3215"),
+                    # "back_wheel": (8, "sts3215"),
+                    # "right_wheel": (9, "sts3215"),
                 },
             ),
         }

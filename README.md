@@ -1,3 +1,35 @@
+## BTG fork of lerobot (msedlkh)
+
+### Run so100 remotely: 
+Set viewer_ip and viewer_port to ip of remote pc
+- On lerobot (pi): 
+```
+python lerobot/scripts/control_robot.py --robot.type=so100 --control.type=remote_robot --control.viewer_ip="100.93.72.56" --control.viewer_port="5555"
+```
+
+- On remote pc:  
+```
+python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type=remote_teleoperate --control.fps=30 --control.display_data=true
+
+```
+### Run dataset capture on so100_remote
+```
+ python lerobot/scripts/control_robot.py \
+  --robot.type=so100_remote \
+  --control.type=record \
+  --control.fps=30 \
+  --control.single_task="Grasp a lego block and put it in the bin." \ [Here place the task action description]
+  --control.repo_id=${HF_USER}/so100_test \ [Here the repo id for pushing to huggingface hub]
+  --control.tags='["so100","tutorial"]' \ [tags for hub upload]
+  --control.warmup_time_s=5 \ [time between sets]
+  --control.episode_time_s=10 \
+  --control.reset_time_s=10 \
+  --control.num_episodes=2 \
+  --control.push_to_hub=false \ [Here set to true for uploading dataset to hub]
+  --control.display_data=true
+```
+### Run train/test on so100_remote
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="media/lerobot-logo-thumbnail.png">
