@@ -494,7 +494,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 height=720,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
-                camera_index=0,
+                camera_index=16,
                 fps=25,
                 width=3280,
                 height=2464,
@@ -567,7 +567,7 @@ class So100RemoteRobotConfig(RobotConfig):
                 height=720,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
-                camera_index=0,
+                camera_index=16,
                 fps=25,
                 width=3280,
                 height=2464,
