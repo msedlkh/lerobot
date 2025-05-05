@@ -46,6 +46,7 @@ class OpenCVCameraConfig(CameraConfig):
     color_mode: str = "rgb"
     channels: int | None = None
     rotation: int | None = None
+    resize: tuple[int, int] | None = None
     mock: bool = False
 
     def __post_init__(self):

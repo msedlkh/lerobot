@@ -492,12 +492,14 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 fps=24,
                 width=1280,
                 height=720,
+                resize=(640, 480),
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
                 camera_index=16,
                 fps=25,
                 width=3280,
                 height=2464,
+                resize=(640, 480),
             ),
         }
     )

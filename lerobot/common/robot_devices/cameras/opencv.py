@@ -281,6 +281,10 @@ class OpenCVCamera:
         elif config.rotation == 180:
             self.rotation = cv2.ROTATE_180
 
+        self.resize = None
+        if config.resize is not None:
+            self.resize = config.resize
+
     def connect(self):
         if self.is_connected:
             raise RobotDeviceAlreadyConnectedError(f"OpenCVCamera({self.camera_index}) is already connected.")
@@ -412,6 +416,9 @@ class OpenCVCamera:
 
         if self.rotation is not None:
             color_image = cv2.rotate(color_image, self.rotation)
+
+        if self.resize is not None:
+            color_image = cv2.resize(color_image, self.resize)
 
         # log the number of seconds it took to read the image
         self.logs["delta_timestamp_s"] = time.perf_counter() - start_time
