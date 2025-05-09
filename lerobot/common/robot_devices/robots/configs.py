@@ -545,20 +545,19 @@ class So100RobotConfig(ManipulatorRobotConfig):
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
             "cam_high": OpenCVCameraConfig( #realsense camera
-                camera_index=14,
+                camera_index=6,
                 fps=30,
                 width=640,
                 height=480,
             ),
-            "cam_low": OpenCVCameraConfig( #insta 360 camera
-                camera_index=0,
-                fps=24,
-                width=1280,
-                height=720,
-                resize=(640, 480),
+            "cam_gripper": OpenCVCameraConfig( #imx258 camera
+                camera_index=3,
+                fps=30,
+                width=640,
+                height=480,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
-                camera_index=16,
+                camera_index=8,
                 fps=25,
                 width=3280,
                 height=2464,
@@ -620,22 +619,23 @@ class So100RemoteRobotConfig(RobotConfig):
     cameras: dict[str, CameraConfig] = field(
         default_factory=lambda: {
             "cam_high": OpenCVCameraConfig( #realsense camera
-                camera_index=14,
+                camera_index=6,
                 fps=30,
                 width=640,
                 height=480,
             ),
-            "cam_low": OpenCVCameraConfig( #insta 360 camera
-                camera_index=0,
-                fps=24,
-                width=1280,
-                height=720,
+            "cam_gripper": OpenCVCameraConfig( #imx258 camera
+                camera_index=3,
+                fps=30,
+                width=640,
+                height=480,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
-                camera_index=16,
+                camera_index=8,
                 fps=25,
                 width=3280,
                 height=2464,
+                resize=(640, 480),
             ),
         }
     )
