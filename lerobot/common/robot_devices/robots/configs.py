@@ -556,6 +556,12 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 width=640,
                 height=480,
             ),            
+            "cam_front": OpenCVCameraConfig( #imx258 front camera
+                camera_index=10,
+                fps=30,
+                width=640,
+                height=480,
+            ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
                 camera_index=8,
                 fps=25,
@@ -626,6 +632,12 @@ class So100RemoteRobotConfig(RobotConfig):
             ),
             "cam_gripper": OpenCVCameraConfig( #imx258 camera
                 camera_index=3,
+                fps=30,
+                width=640,
+                height=480,
+            ),            
+            "cam_front": OpenCVCameraConfig( #imx258 front camera
+                camera_index=10,
                 fps=30,
                 width=640,
                 height=480,
