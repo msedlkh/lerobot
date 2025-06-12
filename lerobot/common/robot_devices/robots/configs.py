@@ -28,6 +28,10 @@ from lerobot.common.robot_devices.motors.configs import (
     FeetechMotorsBusConfig,
     MotorsBusConfig,
 )
+from lerobot.common.robot_devices.sensors.configs import (
+    NIRONESensorConfig,
+    SensorConfig,
+)
 
 
 @dataclass
@@ -551,7 +555,7 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 height=480,
             ),
             "cam_gripper": OpenCVCameraConfig( #imx258 camera
-                camera_index=3,
+                camera_index=2,
                 fps=30,
                 width=640,
                 height=480,
@@ -568,6 +572,19 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 width=3280,
                 height=2464,
                 resize=(640, 480),
+            ),
+        }
+    )
+
+    sensors: dict[str, SensorConfig] = field(
+        default_factory=lambda: {
+            "nirone": NIRONESensorConfig(
+                serial_number="0A1370022B5", # Replace with the actual serial number of your NIRONE device
+                port="/dev/ttyACM1", # Replace with the actual port of your NIRONE device
+                min_wavelength=1550.0,
+                max_wavelength=1950.0,
+                averaging=1,
+                points=25,
             ),
         }
     )
@@ -631,23 +648,38 @@ class So100RemoteRobotConfig(RobotConfig):
                 height=480,
             ),
             "cam_gripper": OpenCVCameraConfig( #imx258 camera
-                camera_index=3,
+                camera_index=2,
                 fps=30,
                 width=640,
                 height=480,
+                rotation=90,
             ),            
             "cam_front": OpenCVCameraConfig( #imx258 front camera
                 camera_index=10,
                 fps=30,
                 width=640,
                 height=480,
+                rotation=90,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
                 camera_index=8,
                 fps=25,
                 width=3280,
                 height=2464,
-                resize=(640, 480),
+                # resize=(640, 480), 
+            ),
+        }
+    )
+
+    sensors: dict[str, SensorConfig] = field(
+        default_factory=lambda: {
+            "nirone": NIRONESensorConfig(
+                serial_number="0A1370022B5", # Replace with the actual serial number of your NIRONE device
+                port="/dev/ttyACM1", # Replace with the actual port of your NIRONE device
+                min_wavelength=1550.0,
+                max_wavelength=1950.0,
+                averaging=1,
+                points=25,
             ),
         }
     )
