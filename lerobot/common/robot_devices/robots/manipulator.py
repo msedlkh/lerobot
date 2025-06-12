@@ -31,6 +31,7 @@ import torch
 
 from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
 from lerobot.common.robot_devices.motors.utils import MotorsBus, make_motors_buses_from_configs
+from lerobot.common.robot_devices.sensors.utils import make_sensors_from_configs
 from lerobot.common.robot_devices.robots.configs import ManipulatorRobotConfig
 from lerobot.common.robot_devices.robots.utils import get_arm_id
 from lerobot.common.robot_devices.utils import RobotDeviceAlreadyConnectedError, RobotDeviceNotConnectedError
@@ -166,6 +167,7 @@ class ManipulatorRobot:
         self.leader_arms = make_motors_buses_from_configs(self.config.leader_arms)
         self.follower_arms = make_motors_buses_from_configs(self.config.follower_arms)
         self.cameras = make_cameras_from_configs(self.config.cameras)
+        self.sensors = make_sensors_from_configs(self.config.sensors)
         self.is_connected = False
         self.logs = {}
         # add remote ip if in config
@@ -189,6 +191,19 @@ class ManipulatorRobot:
         return cam_ft
 
     @property
+    def sensor_features(self) -> dict:
+        sensor_ft = {}
+        for sensor_key, sensor in self.sensors.items():
+            key = f"observation.sensors.{sensor_key}"
+            sensor_ft[key] = {
+                "dtype": "float32",
+                "shape": (sensor.points,),
+                "names": ["raw_intensity"],
+                "info": None,
+            }
+        return sensor_ft
+
+    @property
     def motor_features(self) -> dict:
         action_names = self.get_motor_names(self.leader_arms)
         state_names = self.get_motor_names(self.leader_arms)
@@ -207,7 +222,7 @@ class ManipulatorRobot:
 
     @property
     def features(self):
-        return {**self.motor_features, **self.camera_features}
+        return {**self.motor_features, **self.camera_features, **self.sensor_features}
 
     @property
     def has_camera(self):
@@ -234,7 +249,7 @@ class ManipulatorRobot:
                 "ManipulatorRobot is already connected. Do not run `robot.connect()` twice."
             )
 
-        if not self.leader_arms and not self.follower_arms and not self.cameras:
+        if not self.leader_arms and not self.follower_arms and not self.cameras and not self.sensors:
             raise ValueError(
                 "ManipulatorRobot doesn't have any device to connect. See example of usage in docstring of the class."
             )
@@ -294,6 +309,10 @@ class ManipulatorRobot:
         # Connect the cameras
         for name in self.cameras:
             self.cameras[name].connect()
+
+        # Connect the sensors
+        for name in self.sensors:
+            self.sensors[name].connect()
 
         self.is_connected = True
 
@@ -519,6 +538,15 @@ class ManipulatorRobot:
             images[name] = torch.from_numpy(images[name])
             self.logs[f"read_camera_{name}_dt_s"] = self.cameras[name].logs["delta_timestamp_s"]
             self.logs[f"async_read_camera_{name}_dt_s"] = time.perf_counter() - before_camread_t
+        
+        # If sensors are available, read them
+        sensor_data = {}
+        for name in self.sensors:
+            before_sread_t = time.perf_counter()
+            sensor_data[name] = self.sensors[name].async_read()
+            sensor_data[name] = torch.from_numpy(sensor_data[name])
+            self.logs[f"read_sensor_{name}_dt_s"] = self.sensors[name].logs["delta_timestamp_s"]
+            self.logs[f"read_sensor_{name}_dt_s"] = time.perf_counter() - before_sread_t
 
         # Populate output dictionaries
         obs_dict, action_dict = {}, {}
@@ -526,6 +554,8 @@ class ManipulatorRobot:
         action_dict["action"] = action
         for name in self.cameras:
             obs_dict[f"observation.images.{name}"] = images[name]
+        for name in self.sensors:
+            obs_dict[f"observation.sensors.{name}"] = sensor_data[name]
 
         return obs_dict, action_dict
 
@@ -559,12 +589,23 @@ class ManipulatorRobot:
             images[name] = torch.from_numpy(images[name])
             self.logs[f"read_camera_{name}_dt_s"] = self.cameras[name].logs["delta_timestamp_s"]
             self.logs[f"async_read_camera_{name}_dt_s"] = time.perf_counter() - before_camread_t
+        
+        # If sensors are available, read them
+        sensor_data = {}
+        for name in self.sensors:
+            before_sread_t = time.perf_counter()
+            sensor_data[name] = self.sensors[name].async_read()
+            sensor_data[name] = torch.from_numpy(sensor_data[name])
+            self.logs[f"read_sensor_{name}_dt_s"] = self.sensors[name].logs["delta_timestamp_s"]
+            self.logs[f"read_sensor_{name}_dt_s"] = time.perf_counter() - before_sread_t
 
         # Populate output dictionaries and format to pytorch
         obs_dict = {}
         obs_dict["observation.state"] = state
         for name in self.cameras:
             obs_dict[f"observation.images.{name}"] = images[name]
+        for name in self.sensors:
+            obs_dict[f"observation.sensors.{name}"] = sensor_data[name]
         return obs_dict
 
     def send_action(self, action: torch.Tensor) -> torch.Tensor:
@@ -625,6 +666,9 @@ class ManipulatorRobot:
 
         for name in self.cameras:
             self.cameras[name].disconnect()
+
+        for name in self.sensors:
+            self.sensors[name].disconnect()
 
         self.is_connected = False
 

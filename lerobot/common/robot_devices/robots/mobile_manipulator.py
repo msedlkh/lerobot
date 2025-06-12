@@ -26,7 +26,8 @@ import zmq
 from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
 from lerobot.common.robot_devices.motors.feetech import TorqueMode
 from lerobot.common.robot_devices.motors.utils import MotorsBus, make_motors_buses_from_configs
-from lerobot.common.robot_devices.robots.configs import LeKiwiRobotConfig
+from lerobot.common.robot_devices.sensors.utils import make_sensors_from_configs
+from lerobot.common.robot_devices.robots.configs import LeKiwiRobotConfig, So100RemoteRobotConfig
 from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
 from lerobot.common.robot_devices.robots.utils import get_arm_id
 from lerobot.common.robot_devices.utils import RobotDeviceNotConnectedError
@@ -57,7 +58,7 @@ class MobileManipulator:
     In parallel, keyboard teleoperation is used to generate raw velocity commands for the wheels.
     """
 
-    def __init__(self, config: LeKiwiRobotConfig):
+    def __init__(self, config: So100RemoteRobotConfig):
         """
         Expected keys in config:
           - ip, port, video_port for the remote connection.
@@ -80,9 +81,12 @@ class MobileManipulator:
 
         self.cameras = make_cameras_from_configs(self.config.cameras)
 
+        self.sensors = make_sensors_from_configs(self.config.sensors)
+
         self.is_connected = False
 
         self.last_frames = {}
+        self.last_sensors = {}
         self.last_present_speed = {}
         self.last_remote_arm_state = torch.zeros(6, dtype=torch.float32)
 
@@ -135,6 +139,19 @@ class MobileManipulator:
                 "info": None,
             }
         return cam_ft
+    
+    @property
+    def sensor_features(self) -> dict:
+        sensor_ft = {}
+        for sensor_key, sensor in self.sensors.items():
+            key = f"observation.sensors.{sensor_key}"
+            sensor_ft[key] = {
+                "dtype": "float32",
+                "shape": (sensor.points,),
+                "names": ["raw_intensity"],
+                "info": None,
+            }
+        return sensor_ft
 
     @property
     def motor_features(self) -> dict:
@@ -163,7 +180,7 @@ class MobileManipulator:
 
     @property
     def features(self):
-        return {**self.motor_features, **self.camera_features}
+        return {**self.motor_features, **self.camera_features, **self.sensor_features}
 
     @property
     def has_camera(self):
@@ -344,6 +361,7 @@ class MobileManipulator:
             observation = json.loads(last_msg)
 
             images_dict = observation.get("images", {})
+            sensors_dict = observation.get("sensors", {})
             new_speed = observation.get("present_speed", {})
             new_arm_state = observation.get("follower_arm_state", None)
 
@@ -356,9 +374,17 @@ class MobileManipulator:
                     if frame_candidate is not None:
                         frames[cam_name] = frame_candidate
 
+            # Convert sensors
+            for sensor_name, sensor_data in sensors_dict.items():
+                if sensor_data:
+                    # Convert the sensor data to a numpy array
+                    sensors_array = np.array(sensor_data, dtype=np.float32)
+                    sensors_dict[sensor_name] = sensors_array
+
             # If remote_arm_state is None and frames is None there is no message then use the previous message
             if new_arm_state is not None and frames is not None:
                 self.last_frames = frames
+                self.last_sensors = sensors_dict
 
                 remote_arm_state_tensor = torch.tensor(new_arm_state, dtype=torch.float32)
                 self.last_remote_arm_state = remote_arm_state_tensor
@@ -367,6 +393,7 @@ class MobileManipulator:
                 self.last_present_speed = new_speed
             else:
                 frames = self.last_frames
+                sensors_dict = self.last_sensors
 
                 remote_arm_state_tensor = self.last_remote_arm_state
 
@@ -375,9 +402,9 @@ class MobileManipulator:
         except Exception as e:
             print(f"[DEBUG] Error decoding video message: {e}")
             # If decode fails, fall back to old data
-            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state, self.last_sensors)
 
-        return frames, present_speed, remote_arm_state_tensor
+        return frames, present_speed, remote_arm_state_tensor, sensors_dict
 
     def _process_present_speed(self, present_speed: dict) -> torch.Tensor:
         state_tensor = torch.zeros(3, dtype=torch.int32)
@@ -457,7 +484,7 @@ class MobileManipulator:
         if not self.is_connected:
             raise RobotDeviceNotConnectedError("Not connected. Run `connect()` first.")
 
-        frames, present_speed, remote_arm_state_tensor = self._get_data()
+        frames, present_speed, remote_arm_state_tensor, sensors_dict = self._get_data()
 
         body_state = self.wheel_raw_to_body(present_speed)
 
@@ -474,6 +501,13 @@ class MobileManipulator:
                 # Create a black image using the camera's configured width, height, and channels
                 frame = np.zeros((cam.height, cam.width, cam.channels), dtype=np.uint8)
             obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
+
+        # Loop over each configured sensor
+        for sensor_name, sensor_data in sensors_dict.items():
+            data = sensors_dict.get(sensor_name, None)
+            if sensor_data is None:
+                data = np.zeros((sensor_data.points,), dtype=np.float32)
+            obs_dict[f"observation.sensors.{sensor_name}"] = torch.from_numpy(data)
 
         return obs_dict
 

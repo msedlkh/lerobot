@@ -47,6 +47,7 @@ class ManipulatorRobotConfig(RobotConfig):
     leader_arms: dict[str, MotorsBusConfig] = field(default_factory=lambda: {})
     follower_arms: dict[str, MotorsBusConfig] = field(default_factory=lambda: {})
     cameras: dict[str, CameraConfig] = field(default_factory=lambda: {})
+    sensors: dict[str, SensorConfig] = field(default_factory=lambda: {})
 
     # Optionally limit the magnitude of the relative positional target vector for safety purposes.
     # Set this to a positive scalar to have the same value for all motors, or a list that is the same length
@@ -72,6 +73,9 @@ class ManipulatorRobotConfig(RobotConfig):
             for cam in self.cameras.values():
                 if not cam.mock:
                     cam.mock = True
+            for sensor in self.sensors.values():
+                if not sensor.mock:
+                    sensor.mock = True
 
         if self.max_relative_target is not None and isinstance(self.max_relative_target, Sequence):
             for name in self.follower_arms:
@@ -555,21 +559,21 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 height=480,
             ),
             "cam_gripper": OpenCVCameraConfig( #imx258 camera
-                camera_index=2,
+                camera_index=8,
                 fps=30,
                 width=640,
                 height=480,
-		rotation=-90,
+		        rotation=-90,
             ),            
             "cam_front": OpenCVCameraConfig( #imx258 front camera
                 camera_index=10,
                 fps=30,
                 width=640,
                 height=480,
-		rotation=-90,
+		        rotation=-90,
             ),            
             "gelsight": OpenCVCameraConfig( #gelsight camera
-                camera_index=8,
+                camera_index=0,
                 fps=25,
                 width=3280,
                 height=2464,
