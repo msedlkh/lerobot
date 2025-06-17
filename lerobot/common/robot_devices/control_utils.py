@@ -281,6 +281,10 @@ def control_loop(
             for key in image_keys:
                 rr.log(key, rr.Image(observation[key].numpy()), static=True)
 
+            sensors_keys = [key for key in observation if "sensors" in key]
+            for key in sensors_keys:
+                rr.log(key, rr.Tensor(observation[key].numpy()), static=True)
+
         if fps is not None:
             dt_s = time.perf_counter() - start_loop_t
             busy_wait(1 / fps - dt_s)

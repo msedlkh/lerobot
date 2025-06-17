@@ -18,13 +18,9 @@ from lerobot.common.utils.utils import capture_timestamp_utc
 
 class NIRONESensor:
     def __init__(self, config: NIRONESensorConfig):
+        self.ser = None
+        self.config = config
         self.connected = False
-        self.ser: serial.Serial = serial.Serial(
-            port=config.port,
-            baudrate=115200,
-            timeout=5,
-            write_timeout=3,
-        )
         self.min_wavelength = config.min_wavelength
         self.max_wavelength = config.max_wavelength
         self.points = min(config.points, 512)
@@ -57,6 +53,12 @@ class NIRONESensor:
         else:
             if not self.ser.is_open:
                 try:
+                    self.ser = serial.Serial(
+                        port=self.config.port,
+                        baudrate=115200,
+                        timeout= 5,
+                        write_timeout= 3,
+                    )
                     self.ser.open()
                 except serial.SerialException as e:
                     RobotDeviceNotConnectedError(f"Failed to open the serial port: {e}")

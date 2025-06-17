@@ -26,10 +26,10 @@ import zmq
 from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
 from lerobot.common.robot_devices.motors.feetech import TorqueMode
 from lerobot.common.robot_devices.motors.utils import MotorsBus, make_motors_buses_from_configs
-from lerobot.common.robot_devices.sensors.utils import make_sensors_from_configs
 from lerobot.common.robot_devices.robots.configs import LeKiwiRobotConfig, So100RemoteRobotConfig
 from lerobot.common.robot_devices.robots.feetech_calibration import run_arm_manual_calibration
 from lerobot.common.robot_devices.robots.utils import get_arm_id
+from lerobot.common.robot_devices.sensors.utils import make_sensors_from_configs
 from lerobot.common.robot_devices.utils import RobotDeviceNotConnectedError
 
 PYNPUT_AVAILABLE = True
@@ -341,7 +341,7 @@ class MobileManipulator:
         socks = dict(poller.poll(15))
         if self.video_socket not in socks or socks[self.video_socket] != zmq.POLLIN:
             # No new data arrived → reuse ALL old data
-            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state, self.last_sensors)
 
         # Drain all messages, keep only the last
         last_msg = None
@@ -354,7 +354,7 @@ class MobileManipulator:
 
         if not last_msg:
             # No new message → also reuse old
-            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state)
+            return (self.last_frames, self.last_present_speed, self.last_remote_arm_state, self.last_sensors)
 
         # Decode only the final message
         try:
@@ -375,11 +375,13 @@ class MobileManipulator:
                         frames[cam_name] = frame_candidate
 
             # Convert sensors
-            for sensor_name, sensor_data in sensors_dict.items():
-                if sensor_data:
-                    # Convert the sensor data to a numpy array
-                    sensors_array = np.array(sensor_data, dtype=np.float32)
-                    sensors_dict[sensor_name] = sensors_array
+            for sensor_name, sensor_b64 in sensors_dict.items():
+                if sensor_b64:
+                    sensor_data = base64.b64decode(sensor_b64)
+                    np_arr = np.frombuffer(sensor_data, dtype=np.float32)
+                    arr_candidate = np.array(np_arr, dtype=np.float32)
+                    if arr_candidate is not None:
+                        sensors_dict[sensor_name] = arr_candidate
 
             # If remote_arm_state is None and frames is None there is no message then use the previous message
             if new_arm_state is not None and frames is not None:
@@ -503,10 +505,10 @@ class MobileManipulator:
             obs_dict[f"observation.images.{cam_name}"] = torch.from_numpy(frame)
 
         # Loop over each configured sensor
-        for sensor_name, sensor_data in sensors_dict.items():
+        for sensor_name, sensor in self.sensors.items():
             data = sensors_dict.get(sensor_name, None)
-            if sensor_data is None:
-                data = np.zeros((sensor_data.points,), dtype=np.float32)
+            if data is None:
+                data = np.zeros((sensor.points,), dtype=np.float32)
             obs_dict[f"observation.sensors.{sensor_name}"] = torch.from_numpy(data)
 
         return obs_dict
