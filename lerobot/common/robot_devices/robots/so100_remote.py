@@ -51,6 +51,19 @@ def run_camera_capture(cameras, images_lock, latest_images_dict, stop_event):
             latest_images_dict.update(local_dict)
         time.sleep(0.01)
 
+def run_sensor_capture(sensors, sensor_lock, latest_sensor_data, stop_event):
+    while not stop_event.is_set():
+        local_dict = {}
+        for name, sensor in sensors.items():
+            sensor_data = sensor.async_read()
+            if any(sensor_data):
+                local_dict[name] = base64.b64encode(sensor_data).decode("utf-8")
+            else:
+                local_dict[name] = ""
+        with sensor_lock:
+            latest_sensor_data.update(local_dict)
+        time.sleep(0.01)
+
 
 def calibrate_follower_arm(motors_bus, calib_dir_str):
     """
@@ -94,12 +107,18 @@ def run_so100(robot_config):
     """
     # Import helper functions and classes
     from lerobot.common.robot_devices.cameras.utils import make_cameras_from_configs
+    from lerobot.common.robot_devices.sensors.utils import make_sensors_from_configs
     from lerobot.common.robot_devices.motors.feetech import FeetechMotorsBus, TorqueMode
 
     # Initialize cameras from the robot configuration.
     cameras = make_cameras_from_configs(robot_config.cameras)
     for cam in cameras.values():
         cam.connect()
+
+    # Initialize sensors from the robot configuration.
+    sensors = make_sensors_from_configs(robot_config.sensors)
+    for sensor in sensors.values():
+        sensor.connect()
 
     # Initialize the motors bus using the follower arm configuration.
     motor_config = robot_config.follower_arms.get("main")
@@ -134,6 +153,14 @@ def run_so100(robot_config):
         target=run_camera_capture, args=(cameras, images_lock, latest_images_dict, stop_event), daemon=True
     )
     cam_thread.start()
+
+    # Start the sensor reading thread.
+    latest_sensor_data = {}
+    sensor_lock = threading.Lock()
+    sensor_thread = threading.Thread(
+        target=run_sensor_capture, args=(sensors, sensor_lock, latest_sensor_data, stop_event), daemon=True
+    )
+    sensor_thread.start()
 
     last_cmd_time = time.time()
     print("so100 robot server started. Waiting for commands...")
@@ -199,11 +226,16 @@ def run_so100(robot_config):
             with images_lock:
                 images_dict_copy = dict(latest_images_dict)
 
+            # Get the latest sensor data.
+            with sensor_lock:
+                sensor_data_copy = dict(latest_sensor_data)
+
             # Build the observation dictionary.
             observation = {
                 "images": images_dict_copy,
                 "present_speed": 0,  #current_velocity, # not needed for so100
                 "follower_arm_state": follower_arm_state,
+                "sensors": sensor_data_copy,
             }
             # Send the observation over the video socket.
             video_socket.send_string(json.dumps(observation))
@@ -218,6 +250,7 @@ def run_so100(robot_config):
     finally:
         stop_event.set()
         cam_thread.join()
+        sensor_thread.join()
         # robot.stop() # not needed for so100
         motors_bus.disconnect()
         cmd_socket.close()

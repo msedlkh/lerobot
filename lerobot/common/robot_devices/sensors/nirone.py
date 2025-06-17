@@ -415,10 +415,19 @@ if __name__ == "__main__":
     sensor = NIRONESensor(config)
     sensor.connect()
     print(f"Connected to NIRONE sensor with serial number: {sensor.get_serial_number()}")
-    # read in a loop 10 times
-    for _ in range(10):
-        print(f"Reading data from sensor at {capture_timestamp_utc()}, temperature: {sensor.get_sensor_temperature()}°C")
-        print("Setting measurement data...")
-        sensor.set_measurement_scan()
-        print(f"Wavelength vector: {sensor.get_measurement_scan()}")
+    # # read in a loop 10 times
+    # for _ in range(10):
+    #     print(f"Reading data from sensor at {capture_timestamp_utc()}, temperature: {sensor.get_sensor_temperature()}°C")
+    #     data = sensor.read()
+    #     print(f"Data: {data}")
+    
+    # use async_read to read data for 10 seconds
+    print("Starting asynchronous read from NIRONE sensor...")
+    sensor.async_read()
+    time_wait = time.time()
+    while time.time() - time_wait < 10:
+        data = sensor.nir_array
+        print(f"Data: {data}")
+    print("Asynchronous read completed.")
+    print(f"Sensor logs: {sensor.logs}")
     sensor.disconnect()
