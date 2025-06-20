@@ -51,14 +51,14 @@ class NIRONESensor:
             # In mock mode, we do not need to open a serial connection
             self.connected = True
         else:
+            self.ser = serial.Serial(
+                port=self.config.port,
+                baudrate=115200,
+                timeout= 5,
+                write_timeout= 3,
+            )
             if not self.ser.is_open:
                 try:
-                    self.ser = serial.Serial(
-                        port=self.config.port,
-                        baudrate=115200,
-                        timeout= 5,
-                        write_timeout= 3,
-                    )
                     self.ser.open()
                 except serial.SerialException as e:
                     RobotDeviceNotConnectedError(f"Failed to open the serial port: {e}")
