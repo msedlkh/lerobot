@@ -598,9 +598,9 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 product_id=0x00FF,  # Example product ID, replace with actual
                 interface=2,  # USB interface number
                 endpoint=0x84,  # USB endpoint for interrupt input
-                packet_len=64,  # Length of the USB packet to read
+                packet_len=125,  # Length of the USB packet to read
                 timeout=1000,  # Timeout for USB operations in milliseconds
-                points=64,  # Number of points in the tactile sensor array
+                points=65,  # Number of points in the tactile sensor array
             ),
         }
     )
@@ -702,9 +702,9 @@ class So100RemoteRobotConfig(RobotConfig):
                 product_id=0x00FF,  # Example product ID, replace with actual
                 interface=2,  # USB interface number
                 endpoint=0x84,  # USB endpoint for interrupt input
-                packet_len=64,  # Length of the USB packet to read
+                packet_len=125,  # Length of the USB packet to read
                 timeout=1000,  # Timeout for USB operations in milliseconds
-                points=64,  # Number of points in the tactile sensor array
+                points=65,  # Number of points in the tactile sensor array
             ),
         }
     )

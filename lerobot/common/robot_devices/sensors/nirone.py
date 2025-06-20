@@ -132,11 +132,8 @@ class NIRONESensor:
         try:
             # Set the sensor to perform a measurement scan
             self.set_measurement_scan()
-            nirs = self.get_measurement_scan()
+            nir_array = self.get_measurement_scan()
 
-            nir_array = np.array(self.config.points, dtype=np.float32)
-            if nirs is not None and len(nirs) > 0:
-                nir_array[:] = nirs[:self.config.points]
             self.nir_array = nir_array
             # Capture the time taken for the measurement
             self.logs["delta_timestamp_s"] = time.perf_counter() - start_time

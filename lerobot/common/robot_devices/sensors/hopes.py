@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tactile Sensor CLI")
     parser.add_argument("--vendor_id", type=int, default=0x0000, help="USB Vendor ID")
     parser.add_argument("--product_id", type=int, default=0x00FF, help="USB Product ID")
-    parser.add_argument("--points", type=int, default=161, help="Number of tactile sensor points")
+    parser.add_argument("--points", type=int, default=65, help="Number of tactile sensor points")
     parser.add_argument("--mock", action="store_true", help="Use mock data")
     args = parser.parse_args()
 
