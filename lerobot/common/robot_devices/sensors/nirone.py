@@ -128,17 +128,23 @@ class NIRONESensor:
             raise RobotDeviceNotConnectedError("Serial port is not open.")
         
         start_time = time.perf_counter()
-        # Set the sensor to perform a measurement scan
-        self.set_measurement_scan()
-        nir_array = self.get_measurement_scan()
 
-        # Capture the time taken for the measurement
-        self.logs["delta_timestamp_s"] = time.perf_counter() - start_time
-        self.logs["timestamp_utc"] = capture_timestamp_utc()
-        
-        self.nir_array = nir_array
+        try:
+            # Set the sensor to perform a measurement scan
+            self.set_measurement_scan()
+            nirs = self.get_measurement_scan()
 
-        return nir_array
+            nir_array = np.array(self.config.points, dtype=np.float32)
+            if nirs is not None and len(nirs) > 0:
+                nir_array[:] = nirs[:self.config.points]
+            self.nir_array = nir_array
+            # Capture the time taken for the measurement
+            self.logs["delta_timestamp_s"] = time.perf_counter() - start_time
+            self.logs["timestamp_utc"] = capture_timestamp_utc()
+
+            return nir_array
+        except Exception as e:
+            raise RobotDeviceNotConnectedError(f"Failed to read data from NIRONE sensor: {e}") from e
     
     def read_loop(self):
         while self.stop_event is not None and not self.stop_event.is_set():
