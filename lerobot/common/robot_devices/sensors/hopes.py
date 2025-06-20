@@ -29,9 +29,10 @@ class HOPESSensor:
         self.connected = False
         
         # Data storage
+        self.points = config.points
         self.recorded_nodes_adc = np.zeros([config.points, 1])
         self.recorded_nodes_pol = np.zeros([config.points, 1])
-        self.tactile_data = np.zeros(config.points, dtype=np.float32)
+        self.tactile_data = np.ones(config.points, dtype=np.float32)
         
         # Threading support
         self.thread: Optional[threading.Thread] = None
@@ -57,6 +58,7 @@ class HOPESSensor:
         try:
             self.dev = self._init_usb_device()
             self.connected = True
+            print(f"Connected to tactile sensor: {self.read()}")
         except Exception as e:
             raise RobotDeviceNotConnectedError(f"Failed to connect to tactile sensor: {e}") from e
 
@@ -106,7 +108,7 @@ class HOPESSensor:
             taxels, adc_vals, polarities, flag = self._read_sensor_data()
             
             # Convert to full array format
-            tactile_array = np.zeros(self.config.points, dtype=np.float32)
+            tactile_array = np.ones(self.config.points, dtype=np.float32)
             if taxels is not None and len(taxels) > 0:
                 tactile_array[taxels] = adc_vals
             
@@ -273,7 +275,7 @@ if __name__ == "__main__":
     while time.time() - time_wait < 10:
         data = sensor.tactile_data
         if data is not None:
-            print(f"Data: {data}")
+            print(f"Data: {data}, Shape: {data.shape}, Sum: {np.sum(data)}")
     print(f"Sensor logs: {sensor.logs}")
     
     sensor.disconnect()

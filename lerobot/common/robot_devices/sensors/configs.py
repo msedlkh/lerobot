@@ -64,7 +64,7 @@ class HOPESSensorConfig(SensorConfig):
     endpoint: int = 0x84
     packet_len: int = 125
     timeout: int = 1000
-    points: int = 64
+    points: int = 65
     mock: bool = False
 
     def __post_init__(self):
