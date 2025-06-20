@@ -29,6 +29,7 @@ from lerobot.common.robot_devices.motors.configs import (
     MotorsBusConfig,
 )
 from lerobot.common.robot_devices.sensors.configs import (
+    HOPESSensorConfig,
     NIRONESensorConfig,
     SensorConfig,
 )
@@ -591,6 +592,15 @@ class So100RobotConfig(ManipulatorRobotConfig):
                 max_wavelength=1950.0,
                 averaging=1,
                 points=25,
+            ),
+            "hopes": HOPESSensorConfig(
+                vendor_id=0x0000,  # Example vendor ID, replace with actual
+                product_id=0x00FF,  # Example product ID, replace with actual
+                interface=2,  # USB interface number
+                endpoint=0x84,  # USB endpoint for interrupt input
+                packet_len=64,  # Length of the USB packet to read
+                timeout=1000,  # Timeout for USB operations in milliseconds
+                points=64,  # Number of points in the tactile sensor array
             ),
         }
     )

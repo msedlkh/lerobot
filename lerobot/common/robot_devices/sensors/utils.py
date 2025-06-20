@@ -4,6 +4,7 @@ import numpy as np
 
 from lerobot.common.robot_devices.sensors.configs import (
     NIRONESensorConfig,
+    HOPESSensorConfig,
     SensorConfig,
 )
 
@@ -21,8 +22,10 @@ def make_sensors_from_configs(sensor_configs: dict[str, SensorConfig]) -> list[S
     for key, cfg in sensor_configs.items():
         if cfg.type == "nirone":
             from lerobot.common.robot_devices.sensors.nirone import NIRONESensor
-
             sensors[key] = NIRONESensor(cfg)
+        elif cfg.type == "hopes":
+            from lerobot.common.robot_devices.sensors.hopes import HOPESSensor
+            sensors[key] = HOPESSensor(cfg)
         else:
             raise ValueError(f"The sensor type '{cfg.type}' is not valid.")
 
