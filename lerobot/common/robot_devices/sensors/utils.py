@@ -37,6 +37,11 @@ def make_sensor(sensor_type, **kwargs) -> Sensor:
 
         config = NIRONESensorConfig(**kwargs)
         return NIRONESensor(config)
+    elif sensor_type == "hopes":
+        from lerobot.common.robot_devices.sensors.hopes import HOPESSensor
+
+        config = HOPESSensorConfig(**kwargs)
+        return HOPESSensor(config)
 
     else:
         raise ValueError(f"The sensor type '{sensor_type}' is not valid.")

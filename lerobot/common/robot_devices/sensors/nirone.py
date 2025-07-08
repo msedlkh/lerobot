@@ -73,7 +73,7 @@ class NIRONESensor:
             # Set the wavelength vector
             self.set_wavelength_vector()
             # Set the point scan averaging
-            self.set_point_scan_avg(averaging=1, num_points=100)
+            self.set_point_scan_avg(scan_avg=1, wavelength_avg=100)
             # Set the light mode to manual
             self.set_light_mode(mode=1)
             # Set the light intensity to 100%
@@ -284,7 +284,7 @@ class NIRONESensor:
             for i in range(self.points)
         ]
 
-    def set_point_scan_avg(self, averaging: int = 1, num_points: int = 100):
+    def set_point_scan_avg(self, scan_avg: int = 1, wavelength_avg: int = 100):
         '''
         Set the point scan averaging for the NIRONE sensor.
         Args:
@@ -296,7 +296,7 @@ class NIRONESensor:
             ValueError: If the averaging is less than 1 or if the number of points is less than 1.
             RobotDeviceNotConnectedError: If the sensor is not connected or the serial port is not open.
         '''
-        return self.send_and_read_command(f"V{num_points},{averaging}")
+        return self.send_and_read_command(f"V{wavelength_avg},{scan_avg}")
     
     def set_light_mode(self, mode: int = 0):
         '''
@@ -418,19 +418,19 @@ if __name__ == "__main__":
     sensor = NIRONESensor(config)
     sensor.connect()
     print(f"Connected to NIRONE sensor with serial number: {sensor.get_serial_number()}")
-    # # read in a loop 10 times
-    # for _ in range(10):
-    #     print(f"Reading data from sensor at {capture_timestamp_utc()}, temperature: {sensor.get_sensor_temperature()}°C")
-    #     data = sensor.read()
-    #     print(f"Data: {data}")
+    # read in a loop 10 times
+    for _ in range(10):
+        print(f"Reading data from sensor at {capture_timestamp_utc()}, temperature: {sensor.get_sensor_temperature()}°C")
+        data = sensor.read()
+        print(f"timestamp: {time.time()}, data: {data}")
     
     # use async_read to read data for 10 seconds
-    print("Starting asynchronous read from NIRONE sensor...")
-    sensor.async_read()
-    time_wait = time.time()
-    while time.time() - time_wait < 10:
-        data = sensor.nir_array
-        print(f"Data: {data}")
-    print("Asynchronous read completed.")
+    # print("Starting asynchronous read from NIRONE sensor...")
+    # sensor.async_read()
+    # time_wait = time.time()
+    # while time.time() - time_wait < 10:
+    #     data = sensor.nir_array
+    #     print(f"Data: {data}")
+    # print("Asynchronous read completed.")
     print(f"Sensor logs: {sensor.logs}")
     sensor.disconnect()

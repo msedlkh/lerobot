@@ -55,6 +55,7 @@ TASKS_PATH = "meta/tasks.jsonl"
 DEFAULT_VIDEO_PATH = "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4"
 DEFAULT_PARQUET_PATH = "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet"
 DEFAULT_IMAGE_PATH = "images/{image_key}/episode_{episode_index:06d}/frame_{frame_index:06d}.png"
+DEFAULT_SENSOR_PATH = "sensors/chunk-{episode_chunk:03d}/{sensor_key}/episode_{episode_index:06d}.json"
 
 DATASET_CARD_TEMPLATE = """
 ---
@@ -394,7 +395,7 @@ def get_features_from_robot(robot: Robot, use_videos: bool = True) -> dict:
             key: {"dtype": "video" if use_videos else "image", **ft}
             for key, ft in robot.camera_features.items()
         }
-    return {**robot.motor_features, **camera_ft, **DEFAULT_FEATURES}
+    return {**robot.motor_features, **camera_ft, **robot.sensor_features, **DEFAULT_FEATURES}
 
 
 def dataset_to_policy_features(features: dict[str, dict]) -> dict[str, PolicyFeature]:
@@ -448,6 +449,7 @@ def create_empty_dataset_info(
         "splits": {},
         "data_path": DEFAULT_PARQUET_PATH,
         "video_path": DEFAULT_VIDEO_PATH if use_videos else None,
+        "sensor_path": DEFAULT_SENSOR_PATH,
         "features": features,
     }
 

@@ -184,6 +184,11 @@ class LeRobotDatasetMetadata:
     def camera_keys(self) -> list[str]:
         """Keys to access visual modalities (regardless of their storage method)."""
         return [key for key, ft in self.features.items() if ft["dtype"] in ["video", "image"]]
+    
+    @property
+    def sensor_keys(self) -> list[str]:
+        """Keys to access sensor modalities."""
+        return [key for key, ft in self.features.items() if ft["dtype"] == "sensor"]
 
     @property
     def names(self) -> dict[str, list | dict]:
