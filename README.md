@@ -1,5 +1,10 @@
 ## BTG fork of lerobot (msedlkh)
 
+### Note on lerobot version:
+- https://github.com/huggingface/lerobot/pull/777 introduces changes to the folder structure in the main lerobot branch which is incompatible with the current setup. Migration is possible, but will take some effort to recalibrate and test. While sensor data collected won't be affected, models trained using the robot hardware states (ie. joint positions) will need to be retrained. See `PR#777` for details.
+
+- To add sensors to the lerobot configuration, see note on [Adding Sensors](/Adding_Sensors.md)
+
 ### Run so100 remotely: 
 Set viewer_ip and viewer_port to ip of remote pc
 - On lerobot (pi): 
@@ -19,7 +24,7 @@ python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type
   --control.type=record \
   --control.fps=30 \
   --control.single_task="Grasp a lego block and put it in the bin." \ [Here place the task action description]
-  --control.repo_id=${HF_USER}/so100_test \ [Here the repo id for pushing to huggingface hub]
+  --control.repo_id=${HF_USER}/<YOUR-TEST-NAME> \ [Here the repo id for pushing to huggingface hub]
   --control.tags='["so100","tutorial"]' \ [tags for hub upload]
   --control.warmup_time_s=5 \ [time between sets]
   --control.episode_time_s=10 \
@@ -29,6 +34,10 @@ python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type
   --control.display_data=true
 ```
 ### Run train/test on so100_remote
+See section on [Train your own policy](#train-your-own-policy) for details on training. 
+Note that recorded data is stored in `.cache/huggingface/${HF_USER}/<YOUR-TEST-NAME>` on the leader pc (so100_remote)
+
+---
 
 <p align="center">
   <picture>
