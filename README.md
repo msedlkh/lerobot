@@ -1,11 +1,11 @@
-## BTG fork of lerobot (msedlkh)
+# BTG fork of lerobot
 
-### Note on lerobot version:
+## Note on lerobot version:
 - https://github.com/huggingface/lerobot/pull/777 introduces changes to the folder structure in the main lerobot branch which is incompatible with the current setup. Migration is possible, but will take some effort to recalibrate and test. While sensor data collected won't be affected, models trained using the robot hardware states (ie. joint positions) will need to be retrained. See `PR#777` for details.
 
 - To add sensors to the lerobot configuration, see note on [Adding Sensors](/Adding_Sensors.md)
 
-### Run so100 remotely: 
+## Run so100 remotely: 
 Set viewer_ip and viewer_port to ip of remote pc
 - On lerobot (pi): 
 ```
@@ -17,7 +17,7 @@ python lerobot/scripts/control_robot.py --robot.type=so100 --control.type=remote
 python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type=remote_teleoperate --control.fps=30 --control.display_data=true
 
 ```
-### Run dataset capture on so100_remote
+## Run dataset capture on so100_remote
 ```
  python lerobot/scripts/control_robot.py \
   --robot.type=so100_remote \
@@ -33,9 +33,51 @@ python lerobot/scripts/control_robot.py --robot.type=so100_remote --control.type
   --control.push_to_hub=false \ [Here set to true for uploading dataset to hub]
   --control.display_data=true
 ```
-### Run train/test on so100_remote
+
+## Run train/test on so100_remote
 See section on [Train your own policy](#train-your-own-policy) for details on training. 
 Note that recorded data is stored in `.cache/huggingface/${HF_USER}/<YOUR-TEST-NAME>` on the leader pc (so100_remote)
+
+## Accessing saved data
+Data will be saved to `.cache/huggingface/${HF_USER}/<YOUR-TEST-NAME>`:
+
+```
+.cache/huggingface/${HF_USER}/<YOUR-TEST-NAME> // data stored for test
+├── data // output folder for data captured: {robot state, tactile sensors}
+│   └── chunk-000
+│       ├── episode_000001.parquet
+│       ...
+│       └── episode_000016.parquet
+├── meta // metadata for task, prompts
+│   ├── episodes.jsonl
+│   ├── episodes_stats.jsonl
+│   ├── info.json
+│   └── tasks.jsonl
+└── videos // video data for image sensors (eg. gelsight) and cameras
+    └── chunk-000
+        ├── observation.images.cam_front
+        ├── observation.images.cam_gripper
+        ├── observation.images.cam_high
+        └── observation.images.gelsight
+
+```
+
+### Parquet data
+Each episode, sensor data captured from the robot is stored as a parquet file containing: 
+- robot action // target joint angles
+- observation.state // current joint angles
+- observation.sensors."sensor-name" //current sensor readings
+- timestamp // time(s) since start of episode
+- frame_index // frame within episode
+- episode_index // id for episode
+
+for more details, see [about lerobot dataset](https://docs.phospho.ai/learn/lerobot-dataset):
+
+## Robot Configuration
+
+Configuration settings for the so100 robot can be found at [`lerobot/common/robot_devices/robots/configs.py`](lerobot/common/robot_devices/robots/configs.py#506), containing the `So100RobotConfig` for the follower robot, and the `So100RemoteRobotConfig` for the leader robot. 
+
+Both configurations should be identical, except for sections where the sensor outputs are resized/reshaped before sending, like the gelsight sensor.
 
 ---
 
